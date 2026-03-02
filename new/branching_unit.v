@@ -7,16 +7,14 @@ module branching_unit (
     input  wire [31:0] imm,
     input  wire        branch,
 
-    output reg         taken,
+    output wire        taken,
     output wire [31:0] target
 );
 
-    assign target = pc_e + imm;
+    // BEQ condition
+    assign taken  = branch && (rs1 == rs2);
 
-    always @(*) begin
-        taken = 0;
-        if (branch && (rs1 == rs2))
-            taken = 1;
-    end
+    // Branch target = PC + immediate
+    assign target = pc_e + imm;
 
 endmodule

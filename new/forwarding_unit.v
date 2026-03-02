@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module forwarding_unit (
     input wire [4:0] rs1_e, rs2_e,
     input wire [4:0] rd_m,

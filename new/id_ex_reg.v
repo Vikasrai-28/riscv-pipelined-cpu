@@ -1,57 +1,78 @@
-`timescale 1ns / 1ps
-
 module id_ex_reg (
     input  wire        clk,
     input  wire        reset,
-    input  wire        id_ex_flush,
+    input  wire        flush,
 
-    input  wire [31:0] pc_d,
-    input  wire [31:0] rs1_data_d,
-    input  wire [31:0] rs2_data_d,
-    input  wire [31:0] imm_d,
-    input  wire [4:0]  rd_d,
-    input  wire [4:0]  rs1_d,
-    input  wire [4:0]  rs2_d,
+    /* data */
+    input  wire [31:0] rs1_data_in,
+    input  wire [31:0] rs2_data_in,
+    input  wire [31:0] imm_in,
 
-    input  wire        reg_write_d,
-    input  wire        alu_src_d,
-    input  wire        branch_d,
+    /* register numbers */
+    input  wire [4:0]  rs1_in,
+    input  wire [4:0]  rs2_in,
+    input  wire [4:0]  rd_in,
 
-    output reg  [31:0] pc_e,
-    output reg  [31:0] rs1_data_e,
-    output reg  [31:0] rs2_data_e,
-    output reg  [31:0] imm_e,
-    output reg  [4:0]  rd_e,
-    output reg  [4:0]  rs1_e,
-    output reg  [4:0]  rs2_e,
-    output reg         reg_write_e,
-    output reg         alu_src_e,
-    output reg         branch_e
+    /* control */
+    input  wire        regwrite_in,
+    input  wire        memread_in,
+    input  wire        memwrite_in,
+    input  wire        memtoreg_in,
+    input  wire        alusrc_in,
+    input  wire        branch_in,
+    input  wire [2:0]  aluop_in,
+
+    /* outputs */
+    output reg  [31:0] rs1_data_out,
+    output reg  [31:0] rs2_data_out,
+    output reg  [31:0] imm_out,
+
+    output reg  [4:0]  rs1_out,
+    output reg  [4:0]  rs2_out,
+    output reg  [4:0]  rd_out,
+
+    output reg         regwrite_out,
+    output reg         memread_out,
+    output reg         memwrite_out,
+    output reg         memtoreg_out,
+    output reg         alusrc_out,
+    output reg         branch_out,
+    output reg  [2:0]  aluop_out
 );
 
     always @(posedge clk) begin
-        if (reset || id_ex_flush) begin
-            pc_e        <= 0;
-            rs1_data_e  <= 0;
-            rs2_data_e  <= 0;
-            imm_e       <= 0;
-            rd_e        <= 0;
-            rs1_e       <= 0;
-            rs2_e       <= 0;
-            reg_write_e <= 0;
-            alu_src_e   <= 0;
-            branch_e    <= 0;
+        if (reset || flush) begin
+            rs1_data_out <= 0;
+            rs2_data_out <= 0;
+            imm_out      <= 0;
+
+            rs1_out <= 0;
+            rs2_out <= 0;
+            rd_out  <= 0;
+
+            regwrite_out <= 0;
+            memread_out  <= 0;
+            memwrite_out <= 0;
+            memtoreg_out <= 0;
+            alusrc_out   <= 0;
+            branch_out   <= 0;
+            aluop_out    <= 0;
         end else begin
-            pc_e        <= pc_d;
-            rs1_data_e  <= rs1_data_d;
-            rs2_data_e  <= rs2_data_d;
-            imm_e       <= imm_d;
-            rd_e        <= rd_d;
-            rs1_e       <= rs1_d;
-            rs2_e       <= rs2_d;
-            reg_write_e <= reg_write_d;
-            alu_src_e   <= alu_src_d;
-            branch_e    <= branch_d;
+            rs1_data_out <= rs1_data_in;
+            rs2_data_out <= rs2_data_in;
+            imm_out      <= imm_in;
+
+            rs1_out <= rs1_in;
+            rs2_out <= rs2_in;
+            rd_out  <= rd_in;
+
+            regwrite_out <= regwrite_in;
+            memread_out  <= memread_in;
+            memwrite_out <= memwrite_in;
+            memtoreg_out <= memtoreg_in;
+            alusrc_out   <= alusrc_in;
+            branch_out   <= branch_in;
+            aluop_out    <= aluop_in;
         end
     end
 

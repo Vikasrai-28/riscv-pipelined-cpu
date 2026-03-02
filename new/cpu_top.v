@@ -1,241 +1,304 @@
 `timescale 1ns / 1ps
+`default_nettype none
 
 module cpu_top (
-    input  wire        clk,
-    input  wire        reset,
+    input  wire clk,
+    input  wire reset,
+   output wire debug_out
 
-    // Debug outputs
-    output wire [31:0] pc,
-    output wire [31:0] instr,
-    output wire        wb_we,
-    output wire [4:0]  wb_rd,
-    output wire [31:0] wb_data
 );
 
-    // ======================================================
-    // IF STAGE
-    // ======================================================
-    wire [31:0] instr_f;
-    wire        pc_write;
-    wire        pc_src;
-    wire [31:0] pc_branch;
+    // ================= WB =================
+    wire [31:0] wb_data;
+    wire [4:0]  wb_rd;
+    wire        wb_we;
+
+    assign debug_out = wb_data[0];
+
+    // ================= IF =================
+    wire [31:0] pc_f, instr_f;
+    wire        stall_f;
+
+    // ================= IF/ID ===============
+    wire [31:0] pc_d, instr_d;
+    wire        flush_d;
+
+    // ================= ID ==================
+    wire [4:0]  rs1_d, rs2_d, rd_d;
+    wire [31:0] imm_d, rs1_data_d, rs2_data_d;
+    wire        reg_write_d, mem_read_d, mem_write_d, mem_to_reg_d;
+    wire        alu_src_d, branch_d;
+    wire [2:0]  alu_op_d;
+
+    // ================= ID/EX ================
+    wire [31:0] rs1_data_e, rs2_data_e, imm_e;
+    wire [4:0]  rs1_e, rs2_e, rd_e;
+    wire        reg_write_e, mem_read_e, mem_write_e, mem_to_reg_e;
+    wire        alu_src_e, branch_e;
+    wire [2:0]  alu_op_e;
+
+    // ================= EX/MEM ===============
+    wire [31:0] alu_result_m, rs2_data_m;
+    wire [4:0]  rd_m;
+    wire        reg_write_m, mem_read_m, mem_write_m, mem_to_reg_m;
+
+    // ================= MEM/WB ===============
+    wire [31:0] alu_result_w, mem_read_data_w;
+    wire [4:0]  rd_w;
+    wire        reg_write_w, mem_to_reg_w;
+
+    // ================= FORWARDING ===========
+    wire [1:0]  forward_a, forward_b;
+    wire [31:0] alu_in1, alu_in2;
+
+
+
+    /* ===================== IF ===================== */
 
     if_stage IF (
-        .clk       (clk),
-        .reset     (reset),
-        .pc_write  (pc_write),
-        .pc_src    (pc_src),
-        .pc_branch (pc_branch),
-        .pc        (pc),
-        .instr_f   (instr_f)
+        .clk(clk),
+        .reset(reset),
+        .stall(stall_f),
+        .pc_out(pc_f)
     );
 
-    // ======================================================
-    // IF / ID PIPELINE REGISTER
-    // ======================================================
-    wire [31:0] pc_d, instr_d;
-    wire        if_id_write;
-    wire        if_id_flush;
+    instr_mem IMEM (
+        .addr(pc_f),
+        .instr(instr_f)
+    );
+
+    /* ==================== IF/ID ================== */
 
     if_id_reg IF_ID (
-        .clk         (clk),
-        .reset       (reset),
-        .if_id_write (if_id_write),
-        .flush       (if_id_flush),
-        .pc_f        (pc),
-        .instr_f     (instr_f),
-        .pc_d        (pc_d),
-        .instr_d     (instr_d)
+        .clk(clk),
+        .reset(reset),
+        .stall(stall_f),
+        .flush(flush_d),
+        .pc_in(pc_f),
+        .instr_in(instr_f),
+        .pc_out(pc_d),
+        .instr_out(instr_d)
     );
 
-    assign instr = instr_d;
+    /* ===================== ID ==================== */
+  
+ 
+    
+  
 
-    // ======================================================
-    // ID STAGE
-    // ======================================================
-    wire [4:0] rs1, rs2, rd;
-    wire [6:0] opcode;
-    wire [31:0] imm;
 
     id_stage ID (
-        .instr  (instr_d),
-        .rs1    (rs1),
-        .rs2    (rs2),
-        .rd     (rd),
-        .opcode (opcode),
-        .imm    (imm)
+        .instr(instr_d),
+        .rs1(rs1_d),
+        .rs2(rs2_d),
+        .rd(rd_d),
+        .imm(imm_d)
     );
-
-    // ======================================================
-    // CONTROL UNIT
-    // ======================================================
-    wire reg_write_d, alu_src_d, branch_d;
 
     control_unit CU (
-        .opcode    (opcode),
-        .reg_write (reg_write_d),
-        .alu_src   (alu_src_d),
-        .branch    (branch_d)
+        .opcode(instr_d[6:0]),
+        .regwrite(reg_write_d),
+        .memread(mem_read_d),
+        .memwrite(mem_write_d),
+        .memtoreg(mem_to_reg_d),
+        .alusrc(alu_src_d),
+        .branch(branch_d),
+        .aluop(alu_op_d)
     );
-
-    // ======================================================
-    // REGISTER FILE
-    // ======================================================
-    wire [31:0] rf_rd1, rf_rd2;
 
     regfile RF (
-        .clk  (clk),
-        .we   (wb_we),
-        .ra1  (rs1),
-        .ra2  (rs2),
-        .wa   (wb_rd),
-        .wd   (wb_data),
-        .rd1  (rf_rd1),
-        .rd2  (rf_rd2)
+        .clk(clk),
+        .we(wb_we),
+        .rs1(rs1_d),
+        .rs2(rs2_d),
+        .rd(wb_rd),
+        .wd(wb_data),
+        .rd1(rs1_data_d),
+        .rd2(rs2_data_d)
     );
 
-    // ======================================================
-    // ID / EX PIPELINE REGISTER
-    // ======================================================
-    wire [31:0] pc_e, rs1_e, rs2_e, imm_e;
-    wire [4:0]  rd_e, rs1_idx_e, rs2_idx_e;
-    wire        reg_write_e, alu_src_e, branch_e;
-    wire        id_ex_flush;
-
-    id_ex_reg ID_EX (
-        .clk          (clk),
-        .reset        (reset),
-        .id_ex_flush  (id_ex_flush),
-
-        .pc_d         (pc_d),
-        .rs1_data_d   (rf_rd1),
-        .rs2_data_d   (rf_rd2),
-        .imm_d        (imm),
-        .rd_d         (rd),
-        .rs1_d        (rs1),
-        .rs2_d        (rs2),
-
-        .reg_write_d  (reg_write_d),
-        .alu_src_d    (alu_src_d),
-        .branch_d     (branch_d),
-
-        .pc_e         (pc_e),
-        .rs1_data_e   (rs1_e),
-        .rs2_data_e   (rs2_e),
-        .imm_e        (imm_e),
-        .rd_e         (rd_e),
-        .rs1_e        (rs1_idx_e),
-        .rs2_e        (rs2_idx_e),
-        .reg_write_e  (reg_write_e),
-        .alu_src_e    (alu_src_e),
-        .branch_e     (branch_e)
-    );
-
-    // ======================================================
-    // FORWARDING UNIT
-    // ======================================================
-    wire [1:0] forward_a, forward_b;
-    wire [31:0] alu_result_m;
-    wire [4:0]  rd_m;
-    wire        reg_write_m;
-
-    forwarding_unit FU (
-        .rs1_e        (rs1_idx_e),
-        .rs2_e        (rs2_idx_e),
-        .rd_m         (rd_m),
-        .reg_write_m  (reg_write_m),
-        .rd_w         (wb_rd),
-        .reg_write_w  (wb_we),
-        .forward_a    (forward_a),
-        .forward_b    (forward_b)
-    );
-
-    // ======================================================
-    // EX STAGE (ALU + BRANCH)
-    // ======================================================
-    wire [31:0] alu_result_e;
-    wire [4:0]  rd_ex;
-    wire        branch_taken_e;
-    wire [31:0] branch_target_e;
-
-    ex_stage EX (
-        .pc_e            (pc_e),
-        .rs1_data_e      (rs1_e),
-        .rs2_data_e      (rs2_e),
-        .imm_e           (imm_e),
-        .alu_src_e       (alu_src_e),
-        .branch_e        (branch_e),
-
-        .alu_result_m    (alu_result_m),
-        .wb_data         (wb_data),
-        .forward_a       (forward_a),
-        .forward_b       (forward_b),
-
-        .rd_e            (rd_e),
-        .alu_result_e    (alu_result_e),
-        .rd_out          (rd_ex),
-        .branch_taken_e  (branch_taken_e),
-        .branch_target_e (branch_target_e)
-    );
-
-    // ======================================================
-    // EX / MEM PIPELINE REGISTER  (✔ BRANCH FLUSH FIX)
-    // ======================================================
-   wire ex_mem_flush;
-assign ex_mem_flush = branch_taken_e;
-
-   ex_mem_reg EX_MEM (
-    .clk           (clk),
-    .reset         (reset),
-    .flush         (ex_mem_flush),   // <<< ADD
-    .alu_result_e  (alu_result_e),
-    .rd_e          (rd_ex),
-    .reg_write_e   (reg_write_e),
-    .alu_result_m  (alu_result_m),
-    .rd_m          (rd_m),
-    .reg_write_m   (reg_write_m)
-);
-
-    // ======================================================
-    // MEM / WB PIPELINE REGISTER
-    // ======================================================
-    mem_wb_reg MEM_WB (
-        .clk           (clk),
-        .reset         (reset),
-        .alu_result_m  (alu_result_m),
-        .rd_m          (rd_m),
-        .reg_write_m   (reg_write_m),
-
-        .alu_result_w  (wb_data),
-        .rd_w          (wb_rd),
-        .reg_write_w   (wb_we)
-    );
-
-    // ======================================================
-    // HAZARD DETECTION UNIT (NO LOADS YET)
-    // ======================================================
-    wire if_id_write_hazard, id_ex_flush_hazard;
+    /* ============== HAZARD DETECTION ============== */
+    wire stall_d, flush_e;
 
     hazard_detection_unit HDU (
-        .reset        (reset),
-        .rs1_d        (rs1),
-        .rs2_d        (rs2),
-        .mem_read_e   (1'b0),
-        .rd_e         (rd_e),
-
-        .pc_write     (pc_write),
-        .if_id_write  (if_id_write_hazard),
-        .id_ex_flush  (id_ex_flush_hazard)
+        .id_rs1(rs1_d),
+        .id_rs2(rs2_d),
+        .ex_rd(rd_e),
+        .ex_memread(mem_read_e),
+        .stall(stall_d),
+        .flush(flush_e)
     );
 
-    // ======================================================
-    // PIPELINE CONTROL & BRANCH HANDLING
-    // ======================================================
-    assign pc_src      = branch_taken_e;
-    assign pc_branch   = branch_target_e;
+    assign stall_f = stall_d;
+    assign flush_d = flush_e;
 
-    assign id_ex_flush = id_ex_flush_hazard | branch_taken_e;
-    assign if_id_flush = branch_taken_e;
-    assign if_id_write = if_id_write_hazard & ~branch_taken_e;
+    /* ==================== ID/EX ================== */
+ 
+
+    
+  
+   id_ex_reg ID_EX (
+    .clk(clk),
+    .reset(reset),
+    .flush(flush_e),
+
+    .rs1_data_in(rs1_data_d),
+    .rs2_data_in(rs2_data_d),
+    .imm_in(imm_d),
+
+    .rs1_in(rs1_d),
+    .rs2_in(rs2_d),
+    .rd_in(rd_d),
+
+    .regwrite_in(reg_write_d),
+    .memread_in(mem_read_d),
+    .memwrite_in(mem_write_d),
+    .memtoreg_in(mem_to_reg_d),
+    .alusrc_in(alu_src_d),
+    .branch_in(branch_d),
+    .aluop_in(alu_op_d),
+
+    .rs1_data_out(rs1_data_e),
+    .rs2_data_out(rs2_data_e),
+    .imm_out(imm_e),
+
+    .rs1_out(rs1_e),
+    .rs2_out(rs2_e),
+    .rd_out(rd_e),
+
+    .regwrite_out(reg_write_e),
+    .memread_out(mem_read_e),
+    .memwrite_out(mem_write_e),
+    .memtoreg_out(mem_to_reg_e),
+    .alusrc_out(alu_src_e),
+    .branch_out(branch_e),
+    .aluop_out(alu_op_e)
+);
+
+        /* ============== FORWARDING ================== */
+ 
+  
+  forwarding_unit FU (
+    .rs1_e(rs1_e),
+    .rs2_e(rs2_e),
+    .rd_m(rd_m),
+    .reg_write_m(reg_write_m),
+    .rd_w(rd_w),
+    .reg_write_w(reg_write_w),
+    .forward_a(forward_a),
+    .forward_b(forward_b)
+);
+
+    /* ============== FORWARDING MUXES ================== */
+
+    // ALU operand A forwarding
+    assign alu_in1 =
+        (forward_a == 2'b00) ? rs1_data_e :
+        (forward_a == 2'b10) ? alu_result_m :
+        (forward_a == 2'b01) ? wb_data :
+                               rs1_data_e;
+
+    // Forwarded rs2
+    wire [31:0] rs2_forwarded =
+        (forward_b == 2'b00) ? rs2_data_e :
+        (forward_b == 2'b10) ? alu_result_m :
+        (forward_b == 2'b01) ? wb_data :
+                               rs2_data_e;
+
+    // ALUSRC applied AFTER forwarding
+    assign alu_in2 = alu_src_e ? imm_e : rs2_forwarded;
+
+
+    /* ===================== EX ===================== */
+    wire [31:0] alu_result_e;
+    wire        zero_e;
+
+    ex_stage EX (
+        .rs1(alu_in1),
+        .rs2(alu_in2),
+        .imm(imm_e),
+        .alusrc(alu_src_e),
+        .aluop(alu_op_e),
+        .alu_out(alu_result_e),
+        .zero(zero_e)
+    );
+
+    /* ==================== EX/MEM ================= */
+   
+  
+   
+
+    ex_mem_reg EX_MEM (
+        .clk(clk),
+        .reset(reset),
+        .flush(branch_e & zero_e),
+
+        .alu_result_e(alu_result_e),
+        .rs2_data_e(rs2_data_e),
+        .rd_e(rd_e),
+
+        .reg_write_e(reg_write_e),
+        .mem_read_e(mem_read_e),
+        .mem_write_e(mem_write_e),
+        .mem_to_reg_e(mem_to_reg_e),
+
+        .alu_result_m(alu_result_m),
+        .rs2_data_m(rs2_data_m),
+        .rd_m(rd_m),
+
+        .reg_write_m(reg_write_m),
+        .mem_read_m(mem_read_m),
+        .mem_write_m(mem_write_m),
+        .mem_to_reg_m(mem_to_reg_m)
+    );
+
+    /* ===================== MEM =================== */
+    wire [31:0] mem_read_data_m;
+
+    data_mem DMEM (
+        .clk(clk),
+        .mem_read(mem_read_m),
+        .mem_write(mem_write_m),
+        .addr(alu_result_m),
+        .write_data(rs2_data_m),
+        .read_data(mem_read_data_m)
+    );
+
+    /* =================== MEM/WB ================= */
+  
+ 
+  
+
+    mem_wb_reg MEM_WB (
+        .clk(clk),
+        .reset(reset),
+
+        .alu_result_m(alu_result_m),
+        .mem_read_data_m(mem_read_data_m),
+        .rd_m(rd_m),
+        .reg_write_m(reg_write_m),
+        .mem_to_reg_m(mem_to_reg_m),
+
+        .alu_result_w(alu_result_w),
+        .mem_read_data_w(mem_read_data_w),
+        .rd_w(rd_w),
+        .reg_write_w(reg_write_w),
+        .mem_to_reg_w(mem_to_reg_w)
+    );
+
+    /* ===================== WB ==================== */
+  
+    wb_stage WB (
+        .alu_result_w(alu_result_w),
+        .mem_data_w(mem_read_data_w),
+        .rd_w(rd_w),
+        .mem_to_reg_w(mem_to_reg_w),
+        .reg_write_w(reg_write_w),
+
+        .wb_data(wb_data),
+        .wb_rd(wb_rd),
+        .wb_we(wb_we)
+    );
 
 endmodule
+
