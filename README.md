@@ -22,3 +22,5 @@ from scratch in Verilog.
 - Optional RTL-to-GDSII flow (OpenLane)
 
 <img width="1549" height="762" alt="image" src="https://github.com/user-attachments/assets/ae43f5f7-2c41-4992-8bc4-4d5fb74efbfb" />
+<img width="513" height="290" alt="image" src="https://github.com/user-attachments/assets/a66ae454-90bc-4a18-a5a5-6aba198c37e7" />
+
