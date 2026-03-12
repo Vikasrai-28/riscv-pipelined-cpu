@@ -9,6 +9,7 @@ This project demonstrates end-to-end CPU design — from RTL microarchitecture t
 This repository contains the design, verification, and physical implementation of a 5-stage pipelined RISC-V processor implementing the base RV32I instruction set.
 
 The processor follows the classical RISC pipeline architecture:
+<img width="825" height="517" alt="image" src="https://github.com/user-attachments/assets/1f04680d-cef7-41fe-83fd-154990aa8d85" />
 
 Instruction Fetch (IF)
 
