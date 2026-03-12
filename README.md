@@ -184,3 +184,30 @@ This makes the processor silicon-ready at 130nm technology.
 
 🧱 Post-Route Physical Layout (GDS View)
 <img width="1026" height="580" alt="image" src="https://github.com/user-attachments/assets/67c92f0e-f956-4e0f-932b-ee64bb654d02" />
+
+
+## ASIC Physical Implementation Summary
+
+| Metric | Value |
+|------|------|
+| Technology | Sky130 (130 nm) |
+| Die Size | 300 µm × 300 µm |
+| Die Area | 0.09 mm² |
+| Standard Cells | ~4,081 |
+| Placement Rows | 44 |
+| Sites per Row | 434 |
+| Metal Layers | M1–M5 |
+| Core Utilization | ~65 % |
+| Flow | OpenLane RTL-to-GDS |
+
+The processor was implemented using the open-source OpenLane ASIC flow with the Sky130 HD standard cell library. The design successfully completed synthesis, placement, clock tree synthesis, routing, and signoff checks, producing a manufacturable GDSII layout.
+
+## Performance Summary
+
+| Metric | Value |
+|---|---|
+| Minimum Clock Period | 11.84 ns |
+| Maximum Frequency | 84.45 MHz |
+| Worst Setup Slack | 9.27 ns |
+| Worst Hold Slack | 0.35 ns |
+| Total Power | ~38.5 mW |
