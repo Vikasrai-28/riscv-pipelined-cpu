@@ -11,7 +11,7 @@ module instr_mem (
             mem[i] = 32'h00000013; // NOP
         end
 
-        // program
+        // program(program.mem)
         mem[0] = 32'h00500093; // addi x1, x0, 5
         mem[1] = 32'h00300113; // addi x2, x0, 3
         mem[2] = 32'h002081b3; // add  x3, x1, x2
