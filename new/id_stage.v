@@ -8,5 +8,5 @@ module id_stage (
     assign rs1 = instr[19:15];
     assign rs2 = instr[24:20];
     assign rd  = instr[11:7];
-    assign imm = {{20{instr[31]}}, instr[31:20]};
+    assign imm = {{20{instr[31]}}, instr[31:20]};// -1-> 11111111111111111111111111111111 So negative values correctly represent hote hain.
 endmodule
